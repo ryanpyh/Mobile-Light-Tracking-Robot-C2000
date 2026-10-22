@@ -2,14 +2,17 @@
 
 Differential-drive robot that locates a light source and drives to it. A four-direction photodiode array feeds a cascaded controller (outer PD steering loop, inner PI wheel-speed loops) running in embedded C on a TI LAUNCHXL-F28379D. Built by a four-person team for UIUC ME 461, Computer Control of Mechanical Systems.
 
-<!-- Replace with a demo GIF or photo, e.g. ![Robot tracking a light source](docs/demo.gif) -->
-[DEMO GIF OR PHOTO HERE]
+https://github.com/user-attachments/assets/d482ca25-0301-4277-831c-5e9ce1485547
 
 Build log, photos and CAD files: [Hackster.io project page](https://www.hackster.io/541786/mobile-quad-direction-light-tracking-robot-41b3e4)
+
+The main implementation is in [`final_project_alt.c`](final_project_alt.c), with the principal control logic in `SWI_isr()` and sensor/motor support distributed across the interrupt service routines and initialization functions.
 
 ## How it works
 
 Four photodiode modules sit on a 3D-printed platform in a north, south, east, west layout, with north aligned to the direction of travel. Each module amplifies the photodiode current into a 0 to 3.3 V signal, which the LaunchPad ADC samples and scales to a 0 to 3 V range. The robot compares the four intensities, turns toward the brightest direction, drives forward once the source is ahead, and stops when it arrives.
+
+<img width="1280" height="720" alt="AlgorithmFlowchart" src="https://github.com/user-attachments/assets/a291c8ed-ef8c-447d-81ba-0ada1e08d6c1" />
 
 ### Signal path
 
@@ -35,6 +38,8 @@ Wheel velocities are computed from quadrature encoder positions (eQEP1 and eQEP2
 
 ### Behavior states
 
+<img width="4392" height="1316" alt="FSM" src="https://github.com/user-attachments/assets/212c332b-3f23-4d85-a712-65cb73a7a27d" />
+
 | State | Behavior |
 | --- | --- |
 | Searching | Rotates slowly in place to scan for a directional source. The search starts counterclockwise, and if the robot sweeps past a source, it reverses toward the side where the light was last seen. An earlier fixed counterclockwise search kept rotating past the source, so this reversal lets the robot settle onto it instead. |
@@ -43,6 +48,8 @@ Wheel velocities are computed from quadrature encoder positions (eQEP1 and eQEP2
 | Target reached | A first front-sensor threshold stops forward motion. A second threshold, 0.01 V beyond it, sounds the buzzer to signal a strong source directly ahead. |
 
 Tracking and searching use separate start and stop thresholds (hysteresis). If no directional source is detected for 400 ms, the robot returns to searching.
+
+The main implementation is in [`final_project_alt.c`](final_project_alt.c), with the principal control logic in `SWI_isr()` and sensor/motor support distributed across the interrupt service routines and initialization functions.
 
 ## Hardware
 
@@ -135,12 +142,12 @@ SCIA prints the north, east, west and south sensor values, forward-motion flag, 
 
 ME 461 Team 12, University of Illinois Urbana-Champaign.
 
-- Yun Hui (Ryan) Phoon, [GitHub](https://github.com/ryanpyh), [Hackster](https://www.hackster.io/yphoon2)
-- Christina Li, [Hackster](https://www.hackster.io/zl118)
-- Harry Hu, [Hackster](https://www.hackster.io/harry-hu)
-- William Wu, [Hackster](https://www.hackster.io/william-wu)
-
-<!-- Optional: one line per person on who built what. -->
+| Member | Contributions |
+| --- | --- |
+| Yun Hui (Ryan) Phoon ([GitHub](https://github.com/ryanpyh), [Hackster](https://www.hackster.io/yphoon2)) | Photosensor cover CAD, photodiode calibration and testing, light-tracking logic refinement, control code tuning |
+| Harry Hu ([Hackster](https://www.hackster.io/harry-hu)) | Photodiode calibration and testing, light-tracking logic refinement, control code tuning |
+| William Wu ([Hackster](https://www.hackster.io/william-wu)) | Photodiode calibration and testing, ADC sequence code, light-tracking algorithm |
+| Christina Li ([Hackster](https://www.hackster.io/zl118)) | Photosensor platform CAD |
 
 ## License
 
