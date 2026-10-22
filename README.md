@@ -27,9 +27,15 @@ Three chained interrupts run the sensing and control, with the control loop exec
 
 ### Outer loop: light tracking (PD)
 
-- **Directionality.** A light vector magnitude $m = sqrt((N - S)^2 + (W - E)^2)$ measures how directional the light is. A low `m` means the light is similar in every direction, as with ambient lighting.
-- **Normalized error.** The east-west difference is normalized, `(E - W) / (m + 0.25)`, so steering sensitivity stays consistent for dim, distant sources and bright, close ones. This keeps the robot responsive to weak sources without overreacting near strong ones.
-- **PD control.** A PD controller converts the normalized error into a turn-rate command. The derivative term is smoothed with a first-order IIR filter to suppress sensor noise, and the gains are halved while driving forward to prevent swerving. A deadband and a turn-rate limit prevent small-error chatter and overshoot.
+Let $N$, $S$, $E$ and $W$ be the filtered, offset-corrected photodiode voltages. Two quantities drive the outer loop:
+
+$$m = \sqrt{(N - S)^2 + (W - E)^2}$$
+
+$$e = \frac{E - W}{m + 0.25}$$
+
+- **Directionality/directional signal strength** The magnitude $m$ measures how strong the directional component of the light is. Uniform lighting, such as ambient room light, hits all four sensors equally, so the differences between opposite sensors cancel and $m$ stays near zero. A point source darkens the sensors facing it more than the ones opposite, so those differences grow and $m$ becomes large.
+- **Normalized error.** Dividing the east-west difference by $m + 0.25$ keeps steering sensitivity consistent for dim, distant sources and bright, close ones. The robot stays responsive to weak sources without overreacting near strong ones.
+- **PD control.** A PD controller converts $e$ into a turn-rate command. The derivative term is smoothed with a first-order IIR filter to suppress sensor noise, and the gains are halved while driving forward to prevent swerving. A deadband and a turn-rate limit prevent small-error chatter and overshoot.
 - **Diagonal compensation.** When the source sits at 45 degrees between two sensors (north and east, or north and west), the east-west error can fall inside the deadband even though the direction is clear. The controller detects this case and biases the error so the robot still turns toward the source.
 - **Rear source.** If the south sensor reads strongest, the robot commits to a fixed-direction spin, choosing the shorter way around based on the east and west readings.
 
@@ -46,7 +52,7 @@ Wheel velocities are computed from quadrature encoder positions (eQEP1 and eQEP2
 | State | Behavior |
 | --- | --- |
 | Searching | Rotates slowly in place to scan for a directional source. The search starts counterclockwise, and if the robot sweeps past a source, it reverses toward the side where the light was last seen. An earlier fixed counterclockwise search kept rotating past the source, so this reversal lets the robot settle onto it instead. |
-| Tracking | Entered once a strong source (`m` above the start threshold) persists for 200 ms. Steers with the outer PD loop and drives forward only when the source is ahead and roughly centered. Forward speed drops during sharp turns. |
+| Tracking | Entered once a strong source ($m$ above the start threshold) persists for 200 ms. Steers with the outer PD loop and drives forward only when the source is ahead and roughly centered. Forward speed drops during sharp turns. |
 | Committed spin | Short fixed-direction turn, used when the source is acquired far off-axis or detected behind the robot. Sensor changes are ignored until the spin completes, preventing back-and-forth wiggle. |
 | Target reached | A first front-sensor threshold stops forward motion. A second threshold, 0.01 V beyond it, sounds the buzzer to signal a strong source directly ahead. |
 
