@@ -27,7 +27,7 @@ Three chained interrupts run the sensing and control, with the control loop exec
 
 ### Outer loop: light tracking (PD)
 
-- **Directionality.** A light vector magnitude `m = sqrt((N - S)^2 + (W - E)^2)` measures how directional the light is. A low `m` means the light is similar in every direction, as with ambient lighting.
+- **Directionality.** A light vector magnitude $m = sqrt((N - S)^2 + (W - E)^2)$ measures how directional the light is. A low `m` means the light is similar in every direction, as with ambient lighting.
 - **Normalized error.** The east-west difference is normalized, `(E - W) / (m + 0.25)`, so steering sensitivity stays consistent for dim, distant sources and bright, close ones. This keeps the robot responsive to weak sources without overreacting near strong ones.
 - **PD control.** A PD controller converts the normalized error into a turn-rate command. The derivative term is smoothed with a first-order IIR filter to suppress sensor noise, and the gains are halved while driving forward to prevent swerving. A deadband and a turn-rate limit prevent small-error chatter and overshoot.
 - **Diagonal compensation.** When the source sits at 45 degrees between two sensors (north and east, or north and west), the east-west error can fall inside the deadband even though the direction is clear. The controller detects this case and biases the error so the robot still turns toward the source.
