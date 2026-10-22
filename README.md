@@ -12,55 +12,8 @@ The main implementation is in [`final_project_alt.c`](final_project_alt.c), with
 
 Four photodiode modules sit on a 3D-printed platform in a north, south, east, west layout, with north aligned to the direction of travel. Each module amplifies the photodiode current into a 0 to 3.3 V signal, which the LaunchPad ADC samples and scales to a 0 to 3 V range. The robot compares the four intensities, turns toward the brightest direction, drives forward once the source is ahead, and stops when it arrives.
 
-<details open>
-<summary><b>Firmware flowchart</b></summary>
-
-```mermaid
-flowchart TD
-    subgraph STARTUP["Startup"]
-        A["Initialize clocks, GPIO, ADC, ePWM, eQEP, SPI and serial ports"] --> B["Hold still 2 s, then average 2 s of photodiode readings<br/>to get ambient offsets (blue LED blinks)"]
-    end
- 
-    subgraph ADC["ADCA_ISR"]
-        C["Sample N, S, E, W photodiodes<br/>(ADCA A2 to A5)"] --> D["Scale 12-bit counts to 0 to 3 V"] --> E["21st-order FIR low-pass filter"]
-    end
- 
-    subgraph SPI["SPIB_isr, every 1 ms"]
-        F["Subtract ambient offsets"] --> G["Every 4th call, trigger SWI_isr"]
-    end
- 
-    subgraph SWI["SWI_isr, every 4 ms (250 Hz)"]
-        H["Directionality m = sqrt((N - S)^2 + (W - E)^2)<br/>Normalized error e = (E - W) / (m + 0.25)"]
-        H --> I["Update state: start tracking if m > 0.30 for 200 ms,<br/>return to search if m < 0.10 for 400 ms"]
-        I --> P{"N past proximity<br/>limit?"}
-        P -- yes --> TGT["Stop and sound buzzer"]
-        P -- no --> T{"Tracking?"}
-        T -- no --> SRCH["Search: rotate in place toward<br/>last-seen side, V = 0"]
-        T -- yes --> SP{"Committed spin active<br/>or south strongest?"}
-        SP -- yes --> SPIN["Spin at max turn rate, V = 0"]
-        SP -- no --> DIAG["Diagonal check: if N and E (or N and W) are both bright,<br/>bias e by 0.5 toward that side"]
-        DIAG --> DB{"abs(e) > deadband?"}
-        DB -- yes --> PD["Outer PD: turn = Kp_light e + Kd_light de/dt<br/>derivative IIR-filtered, gains halved while driving,<br/>saturated to max turn rate"]
-        DB -- no --> Z["turn = 0"]
-        PD --> FWD{"Source ahead and centered?<br/>abs(E - W) < 0.2 m"}
-        Z --> FWD
-        FWD -- yes --> V["V = 0.5, or 0.1 if abs(turn) > 0.5"]
-        FWD -- no --> V0["V = 0"]
-        TGT --> INNER
-        SRCH --> INNER
-        SPIN --> INNER
-        V --> INNER
-        V0 --> INNER
-        INNER["Inner loop: wheel speeds from eQEP1 and eQEP2,<br/>coupled PI with anti-windup, saturate,<br/>write ePWM2A and ePWM2B"]
-        INNER --> LV["Every 62 cycles: send telemetry to LabVIEW over SCID"]
-    end
- 
-    STARTUP --> ADC
-    E --> F
-    G --> H
-```
- 
-</details>
+<img width="1000" alt="Algorithm_Flowchart_Final" src="https://github.com/user-attachments/assets/fc073ee8-4cc2-4c09-995d-f05f41f85633" />
+*Firmware flow from initialization through sensing, control and telemetry.*
 
 ### Signal path
 
@@ -86,51 +39,9 @@ Wheel velocities are computed from quadrature encoder positions (eQEP1 and eQEP2
 
 ### Behavior states
 
-```mermaid
-stateDiagram-v2
-    direction LR
-    state "Calibrating" as Cal
-    state "Searching" as Search
-    state "Tracking" as Track
-    state "Committed spin" as Spin
-    state "Holding" as Hold
-    state "Target reached" as Target
- 
-    [*] --> Cal
-    Cal --> Search : ambient offsets averaged
-    Search --> Track : m > 0.30 for 200 ms
-    Search --> Spin : m > 0.30 for 200 ms and source far off-axis
-    Track --> Spin : south sensor strongest
-    Spin --> Track : spin timer expires
-    Track --> Search : m < 0.10 for 400 ms
-    Track --> Hold : N reaches follow limit
-    Hold --> Track : N falls back below follow limit
-    Hold --> Target : N reaches proximity limit
-    Target --> Hold : source moves away
- 
-    note right of Search
-        Rotates in place, starting counterclockwise.
-        After losing lock, turns toward the side
-        where the light was last seen.
-    end note
-    note right of Track
-        Outer PD steering and inner PI wheel speed.
-        Drives forward only when the source is ahead
-        and centered. Slows during sharp turns.
-    end note
-    note right of Spin
-        Fixed turn at max rate, sensors ignored.
-        320 ms on far off-axis acquisition,
-        200 ms when the light is behind.
-    end note
-    note right of Hold
-        Forward motion stopped, steering still active.
-    end note
-    note right of Target
-        Stopped, buzzer sounds.
-        Proximity limit is 0.01 V past the follow limit.
-    end note
-```
+<img width="4291" height="2228" alt="State_Machine_Final" src="https://github.com/user-attachments/assets/9a88a175-cf13-472b-b590-df23eca9b0f8" />
+
+*Search, tracking and target-reached states. Tracking starts above m = 0.30 and stops below m = 0.10.*
 
 | State | Behavior |
 | --- | --- |
