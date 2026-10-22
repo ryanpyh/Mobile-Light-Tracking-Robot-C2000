@@ -160,4 +160,6 @@ ME 461 Team 12, University of Illinois Urbana-Champaign.
 
 ## License
 
-Released under GPL-3.0, matching the Hackster project. TI device support files and ME 461 course libraries retain their original licenses and headers.
+Released under the GNU General Public License (LGPL-3.0), matching the Hackster project. TI device support files and ME 461 course libraries retain their original licenses and headers.
+
+Copyright (C) 2025 Ryan Phoon, Christina Li, Harry Hu, William Wu
