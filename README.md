@@ -2,7 +2,7 @@
 
 Differential-drive robot that locates a light source and drives to it. A four-direction photodiode array feeds a cascaded controller (outer PD steering loop, inner PI wheel-speed loops) running in embedded C on a TI LAUNCHXL-F28379D. Built by a four-person team for UIUC ME 461, Computer Control of Mechanical Systems.
 
-https://github.com/user-attachments/assets/d482ca25-0301-4277-831c-5e9ce1485547
+https://github.com/user-attachments/assets/bf6598a2-dd63-4840-a43f-6c7b504a5d55
 
 Build log, photos and CAD files: [Hackster.io project page](https://www.hackster.io/541786/mobile-quad-direction-light-tracking-robot-41b3e4)
 
