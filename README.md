@@ -142,6 +142,34 @@ SCIA prints the north, east, west and south sensor values, forward-motion flag, 
 
 </details>
 
+## Known limitations and Planned Improvements
+
+The robot reliably tracks nearby, direct light sources, but exhibits reduced tracking performance under weak, diffuse, or distant illumination.
+
+### Observed behavior
+
+| Symptom | Likely cause |
+|---|---|
+| Stalls under weak lighting or when source is ~45° | Steering stops when $\lvert e \rvert < 0.25$, where $e = (E-W)/(m+0.25)$, while forward drive requires $\lvert E-W \rvert < 0.2m$. The forward-drive window remains approximately ±11.5°, but the steering deadband widens as signal strength decreases (±18° at $m=1$; ±42° at $m=0.15$). This creates a region where neither the steering or forward drive state is triggered. At a 45° bearing, steering stops entirely below $m \approx 0.14$. |
+| Searches indefinitely with a weak source | Tracking requires the directional signal to stay above 0.30 for ~200 ms. A faint source may never reach that while the robot is rotating. |
+| Oscillates left and right when source is behind | The rear-spin logic has no signal-strength or directional-margin checks, so sensor noise can repeatedly reverse the commanded spin direction, while timer resets prevent the robot from returning to search mode |
+
+### Planned fixes
+
+1. **Unify steering and forward-drive thresholds.** Use a common alignment window to eliminate the region where the robot neither turns nor advances.
+2. **Implement noise-adaptive thresholds.** Extend the existing 2 s calibration phase to estimate per-channel sensor noise and derive steering, tracking, and diagonal-detection thresholds from the measured noise floor.
+3. **Let weak cues guide the search.** When the directional signal is above noise but below the tracking threshold, slow the rotation or bias it toward the stronger side.
+4. **Make the rear spin robust.** Require a minimum strength and directional margin to initiate a rear spin. Then, latch the direction until the spin finishes, and use the last-known source direction when east and west are nearly equal.
+5. **Implement angle-based steering.** Estimate light source bearing as $atan2(E−W, N−S)$ to give a steering error that does not depend on brightness, and reduces steering-error dependence on absolute signal strength.
+
+### Hardware and test improvements
+
+- **Per-sensor gain calibration.** Equalize the four photodiodes' sensitivity using the Arduino test-bench readings.
+- **Wider sensor field of view.** A thin diffuser, a taller cover aperture or a slight upward tilt would improve response to sources above the sensor plane. Check that the cover still rejects uniform room light.
+- **Diagonal sensors or a tilt axis** for the 45° and elevated-source cases.
+- **Standardized test setup.** Test at sensor height first, then at elevated and reflective-floor conditions, with a fixed set of distances and bearings.
+- **Faster logging.** Log sensor values, directional signal, error, state and turn command at 25 to 60 Hz instead of the current 4 Hz telemetry.
+
 ## Future work
 
 - **Eight-direction sensor array.** Add NE, NW, SE and SW photodiodes to improve angular resolution, remove the dead zones between cardinal sensors and smooth steering when the source is off axis.
